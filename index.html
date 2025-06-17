@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hands + Food Metadata Tool</title>
+  <style>
+    body {
+      background: #0d0d0d;
+      color: #eee;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #ffa500;
+    }
+    .drop-zone {
+      border: 2px dashed #555;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 10px;
+      cursor: pointer;
+      background: #1a1a1a;
+      transition: 0.3s;
+    }
+    .drop-zone.dragover {
+      border-color: #ffa500;
+      background: #222;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      background: #222;
+      color: #fff;
+      border: 1px solid #555;
+      padding: 10px;
+      resize: vertical;
+      margin-top: 10px;
+    }
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    button {
+      padding: 10px 20px;
+      background: #ffa500;
+      color: #000;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #ff8800;
+    }
+    #output {
+      background: #111;
+      border: 1px solid #444;
+      padding: 15px;
+      white-space: pre-wrap;
+      margin-top: 10px;
+    }
+    #preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    #preview img {
+      height: 100px;
+      border: 1px solid #555;
+      border-radius: 5px;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🍽️ Hands + Food Metadata Tool</h1>
+
+  <div class="drop-zone" id="dropZone">
+    📁 Drag & drop images here or click to browse
+    <input type="file" id="images" multiple accept="image/*" style="display: none;" />
+  </div>
+
+  <div id="preview"></div>
+
+  <textarea id="prompts" placeholder="Enter one prompt per line (in order)..."></textarea>
+
+  <div class="buttons">
+    <button onclick="previewData()">🔍 Preview</button>
+    <button onclick="generateCSV()">📥 Generate CSV</button>
+  </div>
+
+  <div id="output"></div>
+
+  <script>
+    const STOPWORDS = new Set(["with", "and", "a", "an", "the", "in", "on", "of", "to", "for", "at", "by", "from"]);
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("images");
+    let droppedFiles = [];
+
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("dragover", e => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
+    dropZone.addEventListener("drop", e => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      droppedFiles = Array.from(e.dataTransfer.files);
+      showPreviews();
+    });
+    fileInput.addEventListener("change", () => {
+      droppedFiles = Array.from(fileInput.files);
+      showPreviews();
+    });
+
+    function showPreviews() {
+      const preview = document.getElementById("preview");
+      preview.innerHTML = "";
+      droppedFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = document.createElement("img");
+          img.src = e.target.result;
+          preview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    const TAG_DB = {
+      biryani: ["spicy", "rice", "indian", "pakistani", "masala"],
+      cake: ["sweet", "dessert", "birthday", "frosting", "bake"],
+      salad: ["healthy", "greens", "fresh", "organic"],
+      burger: ["fast food", "american", "grill", "cheese"],
+      pizza: ["cheese", "italian", "pepperoni", "slice"],
+      tea: ["chai", "hot", "cup", "morning"],
+      coffee: ["espresso", "brew", "caffeine", "latte"],
+      halwa: ["dessert", "ghee", "traditional", "sweet"],
+      chaat: ["street", "spicy", "snack", "crispy"],
+      roti: ["flatbread", "indian", "knead", "flour"],
+      samosa: ["fried", "pastry", "spicy", "street"]
+    };
+
+    const GENERIC_TAGS = ["hands", "food", "homemade", "traditional", "close-up", "meal", "yummy", "appetizing", "delicious", "kitchen", "serving"];
+
+    function getCategory(text) {
+      const t = text.toLowerCase();
+      if (t.includes("coffee") || t.includes("tea") || t.includes("drink")) return "Drinks";
+      return "Food";
+    }
+
+    function generateTitle(text) {
+      return text
+        .toLowerCase()
+        .replace(/[^\w\s]/g, "")
+        .split(/\s+/)
+        .filter(w => !STOPWORDS.has(w))
+        .slice(0, 8)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    }
+
+    function generateTags(text) {
+      const base = new Set();
+      const words = text.toLowerCase().match(/\w+/g) || [];
+
+      words.forEach(word => {
+        if (!STOPWORDS.has(word)) {
+          base.add(word);
+          if (TAG_DB[word]) TAG_DB[word].forEach(t => base.add(t));
+        }
+      });
+
+      GENERIC_TAGS.forEach(t => base.add(t));
+
+      return Array.from(base).slice(0, 30).join(", ");
+    }
+
+    function getPrompt(i, file, prompts) {
+      let prompt = prompts[i]?.trim();
+      if (!prompt) {
+        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+        prompt = nameWithoutExt.startsWith("_") ? "Untitled Food Image" : nameWithoutExt.replace(/[_-]+/g, " ");
+      }
+      return prompt;
+    }
+
+    function previewData() {
+      const prompts = document.getElementById("prompts").value
+        .split("\n")
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+      let out = "";
+
+      for (let i = 0; i < droppedFiles.length; i++) {
+        const file = droppedFiles[i];
+        const prompt = getPrompt(i, file, prompts);
+        const title = generateTitle(prompt);
+        const tags = generateTags(prompt);
+        const category = getCategory(prompt);
+
+        out += `📷 ${file.name}\n🔤 Title: ${title}\n🏷️ Tags: ${tags}\n📂 Category: ${category}\n---\n`;
+      }
+
+      document.getElementById("output").textContent = out;
+    }
+
+    // Helper function to escape CSV fields properly
+    function csvEscape(text) {
+      if (!text) return "";
+      const escaped = text.replace(/"/g, '""');
+      if (/[,"\n]/.test(text)) {
+        return `"${escaped}"`;
+      }
+      return escaped;
+    }
+
+    function generateCSV() {
+  const prompts = document.getElementById("prompts").value
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  let csv = "Filename,Title,Keywords,Category,Releases\n";
+
+  for (let i = 0; i < droppedFiles.length; i++) {
+    const file = droppedFiles[i];
+    const prompt = getPrompt(i, file, prompts);
+    const title = generateTitle(prompt);
+    const tags = generateTags(prompt);
+    const category = getCategory(prompt);
+
+    csv += [
+      csvEscape(file.name),
+      csvEscape(title),
+      csvEscape(tags),
+      csvEscape(category),
+      ""
+    ].join(",") + "\n";
+  }
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+
+  // Create timestamp string: YYYYMMDD_HHMMSS
+  const now = new Date();
+  const timestamp = now.getFullYear().toString() +
+                    String(now.getMonth() + 1).padStart(2, "0") +
+                    String(now.getDate()).padStart(2, "0") + "_" +
+                    String(now.getHours()).padStart(2, "0") +
+                    String(now.getMinutes()).padStart(2, "0") +
+                    String(now.getSeconds()).padStart(2, "0");
+
+  a.download = `metadata_${timestamp}.csv`;
+  a.click();
+}
+
+  </script>
+
+</body>
+</html>
