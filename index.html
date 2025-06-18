@@ -1,9 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Hands + Food Metadata Tool</title>
+  <title>Smart AI Tag Generator</title>
   <style>
     body {
       background: #0d0d0d;
@@ -11,10 +10,7 @@
       font-family: 'Segoe UI', sans-serif;
       padding: 20px;
     }
-    h1 {
-      text-align: center;
-      color: #ffa500;
-    }
+    h1 { text-align: center; color: #ffa500; }
     .drop-zone {
       border: 2px dashed #555;
       padding: 40px;
@@ -24,81 +20,41 @@
       background: #1a1a1a;
       transition: 0.3s;
     }
-    .drop-zone.dragover {
-      border-color: #ffa500;
-      background: #222;
-    }
+    .drop-zone.dragover { border-color: #ffa500; background: #222; }
     textarea {
-      width: 100%;
-      height: 150px;
-      background: #222;
-      color: #fff;
-      border: 1px solid #555;
-      padding: 10px;
-      resize: vertical;
-      margin-top: 10px;
+      width: 100%; height: 150px; background: #222;
+      color: #fff; border: 1px solid #555; padding: 10px;
+      margin-top: 10px; resize: vertical;
     }
     .buttons {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin: 15px 0;
+      display: flex; justify-content: center; gap: 10px; margin: 15px 0;
     }
     button {
-      padding: 10px 20px;
-      background: #ffa500;
-      color: #000;
-      font-weight: bold;
-      border: none;
-      cursor: pointer;
-      transition: 0.3s;
+      padding: 10px 20px; background: #ffa500; color: #000;
+      font-weight: bold; border: none; cursor: pointer;
     }
-    button:hover {
-      background: #ff8800;
-    }
+    button:hover { background: #ff8800; }
     #output {
-      background: #111;
-      border: 1px solid #444;
-      padding: 15px;
-      white-space: pre-wrap;
-      margin-top: 10px;
+      background: #111; border: 1px solid #444;
+      padding: 15px; white-space: pre-wrap; margin-top: 10px;
     }
-    #preview {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
+    #preview { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
     #preview img {
-      height: 100px;
-      border: 1px solid #555;
-      border-radius: 5px;
+      height: 100px; border: 1px solid #555; border-radius: 5px;
       object-fit: cover;
     }
   </style>
 </head>
-<body>
-
-<h1>🍽️ Hands + Food Metadata Tool</h1>
-
-<div class="drop-zone" id="dropZone">
+<body><h1>🍽️ AI Metadata Tool with Smart Tags</h1><div class="drop-zone" id="dropZone">
   📁 Drag & drop images here or click to browse
   <input type="file" id="images" multiple accept="image/*" style="display: none;" />
-</div>
-
-<div id="preview"></div>
-
-<textarea id="prompts" placeholder="Enter one prompt per line (in order)..."></textarea>
-
-<div class="buttons">
+</div><div id="preview"></div>
+<textarea id="prompts" placeholder="Enter one prompt per line (in order)..."></textarea><div class="buttons">
   <button onclick="previewData()">🔍 Preview</button>
-  <button onclick="generateCSV()">📥 Generate CSV</button>
-</div>
+  <button onclick="generateCSV()">📅 Generate CSV</button>
+</div><div id="output"></div><script>
+  const STOPWORDS = new Set(["with","and","a","an","the","in","on","of","to","for","at","by","from"]);
 
-<div id="output"></div>
-
-<script>
-  const STOPWORDS = new Set(["with", "and", "a", "an", "the", "in", "on", "of", "to", "for", "at", "by", "from"]);
   const dropZone = document.getElementById("dropZone");
   const fileInput = document.getElementById("images");
   let droppedFiles = [];
@@ -112,19 +68,11 @@
   dropZone.addEventListener("drop", e => {
     e.preventDefault();
     dropZone.classList.remove("dragover");
-    droppedFiles = Array.from(e.dataTransfer.files).sort((a, b) => {
-      const an = parseInt(a.name.match(/\d+/));
-      const bn = parseInt(b.name.match(/\d+/));
-      return an - bn;
-    });
+    droppedFiles = Array.from(e.dataTransfer.files);
     showPreviews();
   });
   fileInput.addEventListener("change", () => {
-    droppedFiles = Array.from(fileInput.files).sort((a, b) => {
-      const an = parseInt(a.name.match(/\d+/));
-      const bn = parseInt(b.name.match(/\d+/));
-      return an - bn;
-    });
+    droppedFiles = Array.from(fileInput.files);
     showPreviews();
   });
 
@@ -142,87 +90,59 @@
     });
   }
 
-  const TAG_DB = {
-    biryani: ["spicy", "rice", "indian", "pakistani", "masala"],
-    cake: ["sweet", "dessert", "birthday", "frosting", "bake"],
-    salad: ["healthy", "greens", "fresh", "organic"],
-    burger: ["fast food", "american", "grill", "cheese"],
-    pizza: ["cheese", "italian", "pepperoni", "slice"],
-    tea: ["chai", "hot", "cup", "morning"],
-    coffee: ["espresso", "brew", "caffeine", "latte"],
-    halwa: ["dessert", "ghee", "traditional", "sweet"],
-    chaat: ["street", "spicy", "snack", "crispy"],
-    roti: ["flatbread", "indian", "knead", "flour"],
-    samosa: ["fried", "pastry", "spicy", "street"]
-  };
-
-  const RANDOM_GENERIC_TAGS = [
-    ["hands", "food", "homemade", "traditional", "close-up"],
-    ["delicious", "meal", "appetizing", "kitchen", "serving"],
-    ["fresh", "organic", "natural", "hot", "crispy"],
-    ["plated", "table", "cooking", "presentation", "texture"],
-    ["snack", "savory", "garnished", "preparation", "dish"]
-  ];
-
-  function getCategory(text) {
-    const t = text.toLowerCase();
-    if (t.includes("coffee") || t.includes("tea") || t.includes("drink")) return "Drinks";
-    return "Food";
-  }
-
-  function generateTitle(text) {
-    return text
-      .toLowerCase()
-      .replace(/[^\w\s]/g, "")
-      .split(/\s+/)
-      .filter(w => !STOPWORDS.has(w))
-      .slice(0, 8)
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
-  }
-
-  function generateTags(text) {
-    const base = new Set();
-    const words = text.toLowerCase().match(/\w+/g) || [];
-
-    words.forEach(word => {
-      if (!STOPWORDS.has(word)) {
-        base.add(word);
-        if (TAG_DB[word]) TAG_DB[word].forEach(t => base.add(t));
-      }
-    });
-
-    const randomSet = RANDOM_GENERIC_TAGS[Math.floor(Math.random() * RANDOM_GENERIC_TAGS.length)];
-    randomSet.forEach(tag => base.add(tag));
-
-    return Array.from(base).slice(0, 30).join(", ");
-  }
-
   function getPrompt(i, file, prompts) {
     let prompt = prompts[i]?.trim();
     if (!prompt) {
       const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-      prompt = nameWithoutExt.startsWith("_") ? "Untitled Food Image" : nameWithoutExt.replace(/[_-]+/g, " ");
+      prompt = nameWithoutExt.replace(/[_-]+/g, " ");
     }
     return prompt;
   }
 
-  function previewData() {
-    const prompts = document.getElementById("prompts").value
-      .split("\n")
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
+  function generateTitle(prompt) {
+    return prompt.split(" ")
+      .filter(word => !STOPWORDS.has(word.toLowerCase()))
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .slice(0, 7).join(" ");
+  }function generateSmartTags(prompt) {
+  const words = (prompt.toLowerCase().match(/\b[a-z]{3,}\b/g) || [])
+    .filter(w => !STOPWORDS.has(w));
+  const uniqueWords = [...new Set(words)];
+  const selected = [];
 
+  // Shuffle
+  for (let i = uniqueWords.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [uniqueWords[i], uniqueWords[j]] = [uniqueWords[j], uniqueWords[i]];
+  }
+
+  // Choose 15 to 30 tags
+  const count = Math.min(30, Math.max(15, uniqueWords.length));
+  for (let i = 0; i < count; i++) {
+    if (uniqueWords[i]) selected.push(uniqueWords[i]);
+  }
+
+  return selected.join(", ");
+}
+
+  function getCategory(prompt) {
+    const lower = prompt.toLowerCase();
+    if (lower.includes("coffee") || lower.includes("tea") || lower.includes("drink")) return "Drinks";
+    return "Food";
+  }
+
+  function previewData() {
+    const prompts = document.getElementById("prompts").value.trim().split("\n");
     let out = "";
 
     for (let i = 0; i < droppedFiles.length; i++) {
       const file = droppedFiles[i];
       const prompt = getPrompt(i, file, prompts);
       const title = generateTitle(prompt);
-      const tags = generateTags(prompt);
+      const tags = generateSmartTags(prompt);
       const category = getCategory(prompt);
 
-      out += `📷 ${file.name}\n🔤 Title: ${title}\n🏷️ Tags: ${tags}\n📂 Category: ${category}\n---\n`;
+      out += `📷 ${file.name}\n🎤 Title: ${title}\n🏷️ Tags: ${tags}\n📂 Category: ${category}\n---\n`;
     }
 
     document.getElementById("output").textContent = out;
@@ -237,7 +157,7 @@
       const file = droppedFiles[i];
       const prompt = getPrompt(i, file, prompts);
       const title = generateTitle(prompt);
-      const tags = generateTags(prompt);
+      const tags = generateSmartTags(prompt);
       const category = getCategory(prompt);
 
       csv += `"${file.name}","${title}","${tags}","${category}",""\n`;
@@ -249,7 +169,5 @@
     a.download = `metadata-${timestamp}.csv`;
     a.click();
   }
-</script>
-
-</body>
+</script></body>
 </html>
