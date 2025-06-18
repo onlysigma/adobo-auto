@@ -1,8 +1,9 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Smart AI Tag Generator</title>
+  <title>Smart Meta AI</title>
   <style>
     body {
       background: #0d0d0d;
@@ -38,26 +39,50 @@
       background: #111; border: 1px solid #444;
       padding: 15px; white-space: pre-wrap; margin-top: 10px;
     }
-    #preview { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+    #preview {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;
+    }
     #preview img {
       height: 100px; border: 1px solid #555; border-radius: 5px;
       object-fit: cover;
     }
   </style>
 </head>
-<body><h1>🍽️ AI Metadata Tool with Smart Tags</h1><div class="drop-zone" id="dropZone">
+<body>
+
+<h1>📸 Smart Meta AI - Hands & Food CSV Tool</h1>
+
+<div class="drop-zone" id="dropZone">
   📁 Drag & drop images here or click to browse
   <input type="file" id="images" multiple accept="image/*" style="display: none;" />
-</div><div id="preview"></div>
-<textarea id="prompts" placeholder="Enter one prompt per line (in order)..."></textarea><div class="buttons">
+</div>
+
+<div id="preview"></div>
+
+<textarea id="prompts" placeholder="Enter one prompt per line (in order)..."></textarea>
+
+<div class="buttons">
   <button onclick="previewData()">🔍 Preview</button>
-  <button onclick="generateCSV()">📅 Generate CSV</button>
-</div><div id="output"></div><script>
-  const STOPWORDS = new Set(["with","and","a","an","the","in","on","of","to","for","at","by","from"]);
+  <button onclick="generateCSV()">📥 Generate CSV</button>
+</div>
+
+<div id="output"></div>
+
+<script>
+  const STOPWORDS = new Set(["with", "and", "a", "an", "the", "in", "on", "of", "to", "for", "at", "by", "from"]);
 
   const dropZone = document.getElementById("dropZone");
   const fileInput = document.getElementById("images");
   let droppedFiles = [];
+
+  // Sort files by numeric value in name
+  function sortFilesByName(files) {
+    return Array.from(files).sort((a, b) => {
+      const aNum = parseInt(a.name.match(/\d+/)?.[0]) || 0;
+      const bNum = parseInt(b.name.match(/\d+/)?.[0]) || 0;
+      return aNum - bNum;
+    });
+  }
 
   dropZone.addEventListener("click", () => fileInput.click());
   dropZone.addEventListener("dragover", e => {
@@ -68,11 +93,11 @@
   dropZone.addEventListener("drop", e => {
     e.preventDefault();
     dropZone.classList.remove("dragover");
-    droppedFiles = Array.from(e.dataTransfer.files);
+    droppedFiles = sortFilesByName(e.dataTransfer.files);
     showPreviews();
   });
   fileInput.addEventListener("change", () => {
-    droppedFiles = Array.from(fileInput.files);
+    droppedFiles = sortFilesByName(fileInput.files);
     showPreviews();
   });
 
@@ -104,26 +129,23 @@
       .filter(word => !STOPWORDS.has(word.toLowerCase()))
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .slice(0, 7).join(" ");
-  }function generateSmartTags(prompt) {
-  const words = (prompt.toLowerCase().match(/\b[a-z]{3,}\b/g) || [])
-    .filter(w => !STOPWORDS.has(w));
-  const uniqueWords = [...new Set(words)];
-  const selected = [];
-
-  // Shuffle
-  for (let i = uniqueWords.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [uniqueWords[i], uniqueWords[j]] = [uniqueWords[j], uniqueWords[i]];
   }
 
-  // Choose 15 to 30 tags
-  const count = Math.min(30, Math.max(15, uniqueWords.length));
-  for (let i = 0; i < count; i++) {
-    if (uniqueWords[i]) selected.push(uniqueWords[i]);
-  }
+  function generateSmartTags(prompt) {
+    const words = (prompt.toLowerCase().match(/\b[a-z]{3,}\b/g) || [])
+      .filter(w => !STOPWORDS.has(w));
+    const uniqueWords = [...new Set(words)];
 
-  return selected.join(", ");
-}
+    // Shuffle
+    for (let i = uniqueWords.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [uniqueWords[i], uniqueWords[j]] = [uniqueWords[j], uniqueWords[i]];
+    }
+
+    // Pick 15–30 tags
+    const count = Math.min(30, Math.max(15, uniqueWords.length));
+    return uniqueWords.slice(0, count).join(", ");
+  }
 
   function getCategory(prompt) {
     const lower = prompt.toLowerCase();
@@ -169,5 +191,7 @@
     a.download = `metadata-${timestamp}.csv`;
     a.click();
   }
-</script></body>
+</script>
+
+</body>
 </html>
